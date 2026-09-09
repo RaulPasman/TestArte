@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2B2823">
+<title>Duelo — descubrí tu gusto obra por obra</title>
+<style>
+:root{
+  --pared:#34302A; --pared-baja:#211F1B; --pared-alta:#3E3931;
+  --cartela:#EDE8DD; --cartela-2:#DED7C8;
+  --tinta:#1A1815; --tinta-2:#5A5348;
+  --tiza:#E7E2D7; --tiza-2:#A9A296;
+  --verde:#41604F; --verde-cl:#7CA189;
+  --ocre:#B79355;
+  --linea:rgba(231,226,215,.14);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua","URW Palladio L",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --sombra:0 1px 1px rgba(0,0,0,.55), 0 20px 38px -16px rgba(0,0,0,.75);
+}
+*{box-sizing:border-box}
+html{height:100%}
+body{
+  margin:0;min-height:100vh;min-height:100dvh;
+  background:radial-gradient(130% 90% at 50% -12%,var(--pared-alta),var(--pared) 55%,var(--pared-baja));
+  color:var(--tiza);font-family:var(--sans);
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--verde-cl);outline-offset:3px}
+.oculto{display:none !important}
+
+/* ---------- pantalla de juego a altura fija ---------- */
+body.jugando{height:100vh;height:100dvh;overflow:hidden}
+#juego{display:flex;flex-direction:column;height:100vh;height:100dvh;
+  padding:calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 10px)}
+
+.top{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding-bottom:8px}
+.ronda{font-variant-numeric:tabular-nums;font-size:13px;color:var(--tiza-2);white-space:nowrap}
+.ronda b{color:var(--tiza);font-weight:500}
+.riel-prog{flex:1;height:2px;background:rgba(231,226,215,.14);position:relative;overflow:hidden}
+.riel-prog i{position:absolute;inset:0 auto 0 0;background:var(--ocre);width:0%}
+.top button{font-size:12.5px;color:var(--tiza-2);border:1px solid var(--linea);padding:4px 10px;border-radius:999px;white-space:nowrap}
+
+.duelo{flex:1;min-height:0;display:flex;gap:12px}
+.duelo.stack{flex-direction:column}
+.lado{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.lado>.pick{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;padding:0;text-align:left}
+.marco{
+  flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.22);padding:6px;
+}
+.marco img{max-height:100%;max-width:100%;width:auto;object-fit:contain;box-shadow:var(--sombra);outline:1px solid rgba(0,0,0,.5)}
+.lado[data-sel="1"] .marco img{outline:2px solid var(--verde-cl);box-shadow:0 0 0 7px rgba(124,161,137,.16),var(--sombra)}
+.ficha{
+  flex:0 0 auto;background:var(--cartela);color:var(--tinta);
+  padding:8px 10px;margin-top:8px;min-height:44px;
+  box-shadow:0 8px 16px -12px rgba(0,0,0,.7);
+}
+.ficha .t{font-family:var(--serif);font-size:14.5px;line-height:1.2;margin:0}
+.ficha .m{font-size:11.5px;color:var(--tinta-2);margin:2px 0 0;font-variant-numeric:tabular-nums}
+.ficha .esperando{font-size:12px;color:#6B6459;font-style:italic}
+.corona{
+  position:absolute;top:6px;left:6px;z-index:2;
+  background:rgba(20,18,15,.82);color:var(--ocre);font-size:11px;
+  padding:3px 8px;border:1px solid rgba(183,147,85,.35);
+}
+.lado[data-sel="1"] .ficha{background:#DCE6DD;box-shadow:inset 4px 0 0 var(--verde),0 8px 16px -12px rgba(0,0,0,.7)}
+.lado[data-sel="1"] .ficha .t::before{content:"✓ ";color:var(--verde);font-weight:700}
+
+.abajo{flex:0 0 auto;padding-top:10px;display:flex;gap:10px;align-items:center}
+.seguir{
+  flex:1;background:var(--verde);color:#F3F0E9;padding:15px;font-size:16px;
+  border:1px solid var(--verde);letter-spacing:.01em;
+}
+.seguir:disabled{background:rgba(231,226,215,.06);color:var(--tiza-2);border-color:var(--linea);cursor:default}
+.pista{font-size:11.5px;color:var(--tiza-2);text-align:center;padding-top:6px;flex:0 0 100%}
+
+/* ---------- portada y resultados ---------- */
+.hoja{max-width:760px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 40px) 20px calc(env(safe-area-inset-bottom) + 60px)}
+.hoja h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,7vw,50px);line-height:1.05;margin:0 0 18px;max-width:20ch}
+.hoja h2{font-family:var(--serif);font-weight:400;font-size:23px;margin:38px 0 12px}
+.hoja p{font-size:15.5px;line-height:1.62;color:var(--tiza-2);max-width:60ch}
+.hoja p b{color:var(--tiza);font-weight:500}
+.pasos{list-style:none;padding:0;margin:22px 0 0;counter-reset:p}
+.pasos li{
+  counter-increment:p;position:relative;padding:0 0 14px 34px;font-size:14.5px;line-height:1.55;color:var(--tiza)
+}
+.pasos li::before{
+  content:counter(p);position:absolute;left:0;top:0;width:22px;height:22px;
+  border:1px solid var(--linea);display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--ocre);font-variant-numeric:tabular-nums;
+}
+.largo{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 0}
+.largo button{border:1px solid var(--linea);padding:10px 16px;font-size:14px}
+.largo button[aria-pressed="true"]{background:var(--verde);border-color:var(--verde);color:#F3F0E9}
+.empezar{
+  margin-top:26px;background:var(--verde);border:1px solid var(--verde);color:#F3F0E9;
+  padding:15px 28px;font-size:16px;width:100%;max-width:340px;
+}
+.empezar:disabled{background:rgba(231,226,215,.06);border-color:var(--linea);color:var(--tiza-2)}
+.carga{font-size:13px;color:var(--tiza-2);border-left:2px solid var(--ocre);padding:2px 0 2px 11px;margin:22px 0 0;font-variant-numeric:tabular-nums}
+
+.podio{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:16px;margin:6px 0 0;align-items:start}
+.podio figure{margin:0}
+.podio .cuadro{height:152px;display:flex;align-items:flex-end;justify-content:center}
+.podio img{max-height:152px;width:auto;max-width:100%;box-shadow:var(--sombra);outline:1px solid rgba(0,0,0,.5)}
+.podio figcaption{font-size:12px;line-height:1.4;color:var(--tiza-2);margin-top:8px}
+.podio figcaption b{display:block;font-family:var(--serif);font-size:14px;color:var(--tiza);font-weight:400}
+
+.rank{margin:8px 0 0}
+.fila{display:grid;grid-template-columns:1fr 56px;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--linea)}
+.fila .n{font-size:14.5px}
+.fila .n small{display:block;color:var(--tiza-2);font-size:11.5px;margin-top:2px}
+.fila .v{text-align:right;font-variant-numeric:tabular-nums;font-size:14px;color:var(--ocre)}
+.fila .barra{grid-column:1/-1;height:3px;background:rgba(231,226,215,.1);margin-top:6px}
+.fila .barra i{display:block;height:100%;background:var(--verde-cl)}
+
+.bloque{background:var(--cartela);color:var(--tinta);padding:16px 18px;margin:14px 0}
+.bloque h3{font-family:var(--serif);font-weight:400;font-size:19px;margin:0 0 3px}
+.bloque .aa{font-size:12.5px;color:var(--tinta-2);margin:0 0 9px}
+.bloque p{font-size:13.6px;line-height:1.6;color:#403A31;max-width:none;margin:0}
+.acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+.acciones button{border:1px solid var(--linea);padding:11px 18px;font-size:14px}
+.acciones .pri{background:var(--verde);border-color:var(--verde);color:#F3F0E9}
+
+@media (min-width:760px){
+  .duelo{gap:20px}
+  #juego{padding-left:22px;padding-right:22px}
+  .ficha{padding:10px 13px}
+  .ficha .t{font-size:16px}
+  .duelo.stack .lado{max-width:760px;width:100%;margin:0 auto}
+  .seguir{max-width:420px;margin:0 auto}
+  .abajo{justify-content:center}
+}
+@media (prefers-reduced-motion:no-preference){
+  .fade{animation:f .28s ease both}
+  @keyframes f{from{opacity:0}to{opacity:1}}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<section class="hoja" id="portada">
+  <h1>Dos cuadros. Elegís uno. Doscientas veces.</h1>
+  <p>El que elegís se queda en la pared y compite contra el siguiente. Vas comparando siempre contra tu favorito actual, así que al final lo que queda no es una opinión: es tu gusto, medido.</p>
+  <ol class="pasos">
+    <li>Los datos de cada obra están tapados hasta que elegís, para que decidas con el ojo y no con el nombre del artista.</li>
+    <li>Tocá la obra que preferís y después <b>Continuar</b>. En la computadora: flechas ← → y Enter.</li>
+    <li>Al terminar te armo el perfil: qué estilos aguantaron más rondas en tu pared, qué artistas elegiste y qué buscar para comprar.</li>
+  </ol>
+  <h2>¿Cuántas rondas?</h2>
+  <div class="largo" id="largo"></div>
+  <p class="carga" id="carga">Buscando obras…</p>
+  <button class="empezar" id="empezar" disabled>Empezar</button>
+  <p style="font-size:12.5px;margin-top:18px">Se guarda el avance en este dispositivo, podés cerrar y volver.</p>
+</section>
+
+<!-- ================= JUEGO ================= -->
+<section id="juego" class="oculto">
+  <div class="top">
+    <span class="ronda">Ronda <b id="rN">1</b> de <span id="rT">200</span></span>
+    <span class="riel-prog"><i id="prog"></i></span>
+    <button id="btnLayout" title="Cambiar disposición">⇅</button>
+    <button id="btnRes">Resultados</button>
+  </div>
+
+  <div class="duelo" id="duelo">
+    <div class="lado" id="ladoA" data-sel="0">
+      <span class="corona oculto" id="coronaA">en la pared · <b id="reinA">0</b></span>
+      <button class="pick" data-lado="A">
+        <div class="marco"><img id="imgA" alt=""></div>
+      </button>
+      <div class="ficha" id="fichaA"><p class="t esperando">Obra A</p></div>
+    </div>
+    <div class="lado" id="ladoB" data-sel="0">
+      <span class="corona oculto" id="coronaB">en la pared · <b id="reinB">0</b></span>
+      <button class="pick" data-lado="B">
+        <div class="marco"><img id="imgB" alt=""></div>
+      </button>
+      <div class="ficha" id="fichaB"><p class="t esperando">Obra B</p></div>
+    </div>
+  </div>
+
+  <div class="abajo">
+    <button class="seguir" id="seguir" disabled>Tocá la que te guste más</button>
+  </div>
+</section>
+
+<!-- ================= RESULTADOS ================= -->
+<section class="hoja oculto" id="resultados"></section>
+
+<script>
+/* Dataset: 49 estilos ("salas") y ~200 obras.
+   Cada obra trae `w` = título del artículo en Wikipedia (inglés) para resolver la imagen,
+   y `q` = consulta de respaldo si el título no existe. */
+const SALAS = [
+  {id:"clasicos_universales",n:"Grandes clásicos reconocibles",a:"1503 – 1930",g:"Clásico",r:"Italia, Países Bajos y Estados Unidos",
+   lema:"Las tres o cuatro obras que reconoce cualquiera, las haya visto o no.",
+   t:"No es una época ni un estilo: es la lista corta de imágenes que se volvieron parte de la cultura general, más allá del arte. Sirven como punto de referencia — el resto de las salas se entienden mejor si sabés contra qué están reaccionando.",
+   rasgos:["Fama fuera del mundo del arte","Técnica virtuosa","Punto de referencia obligado"],
+   pal:["#5C4A32","#2E4A5C","#B8925A","#EDE3D0"],
+   comprar:"Estas no son para tu pared — son para entender el mapa. Nadie compra una reproducción de la Gioconda para el living.",
+   art:["Leonardo da Vinci","Johannes Vermeer","Grant Wood"]},
+
+  {id:"ukiyo_e",n:"Ukiyo-e japonés",a:"1830 – 1857",g:"Tradiciones",r:"Japón",
+   lema:"Estampa hecha por miles de copias, pensada para consumo popular.",
+   t:"Color plano sin sombra, contorno de línea firme y composición cortada en diagonal. Nació como arte barato para el pueblo, no para el palacio, y desde entonces le cambió la cabeza a medio Occidente: sin esto no hay impresionismo ni cartel moderno.",
+   rasgos:["Grabado en madera","Color plano","Composición asimétrica"],
+   pal:["#1F3A5F","#E8E2D0","#B8493A","#3E5C4B"],
+   comprar:"Formato mediano, marco fino oscuro o directamente sin marco. Funciona solo o en pareja con otra estampa.",
+   art:["Katsushika Hokusai","Utagawa Hiroshige"]},
+
+  {id:"impresionismo",n:"Impresionismo",a:"1867 – 1877",g:"Moderno",r:"Francia",
+   lema:"Pintar la luz, no el objeto.",
+   t:"Pincelada corta y visible, sombras de color en vez de negro, escena cotidiana pintada en una sola sesión al aire libre. Es probablemente el estilo más universalmente querido de toda la pintura occidental — nadie se ofende con un Monet.",
+   rasgos:["Pincelada suelta","Luz cambiante","Escena cotidiana"],
+   pal:["#7FA8C9","#E8D9A0","#A8C98A","#F2E9D8"],
+   comprar:"Formato grande para los Nenúfares, mediano para el resto. Es de lo más seguro y menos arriesgado de toda esta lista.",
+   art:["Claude Monet","Pierre-Auguste Renoir","Edgar Degas","Gustave Caillebotte","Berthe Morisot"]},
+
+  {id:"postimpresionismo",n:"Postimpresionismo",a:"1886 – 1897",g:"Moderno",r:"Francia",
+   lema:"Más estructura o más emoción que el impresionismo, según quién lo pinte.",
+   t:"Cada uno tira para un lado distinto: Van Gogh carga el color de emoción hasta que casi vibra, Seurat lo descompone en puntos casi científicos, Gauguin lo aplana hasta volverlo símbolo. Comparten el momento y poco más.",
+   rasgos:["Color subjetivo","Pincelada empastada","Composición pensada"],
+   pal:["#1F3A6B","#E8B23B","#2E6E4A","#0A1A2E"],
+   comprar:"Van Gogh funciona solo, sin acompañar. Es de las paletas más intensas de la lista: no lo pongas al lado de otro cuadro igual de fuerte.",
+   art:["Vincent van Gogh","Georges Seurat","Paul Gauguin","Paul Cézanne"]},
+
+  {id:"fauvismo",n:"Fauvismo",a:"1905 – 1910",g:"Moderno",r:"Francia",
+   lema:"El color liberado de tener que parecerse a la realidad.",
+   t:"Un rostro puede ser verde y un cielo rojo: el fauvismo aplica color puro sin preocuparse por copiar el mundo. Es directo, alegre y sin ironía — de los movimientos más fáciles de disfrutar sin explicación previa.",
+   rasgos:["Color arbitrario y puro","Plano, sin degradé","Pincelada rápida"],
+   pal:["#C23B2E","#2E6E62","#F2C230","#E8622E"],
+   comprar:"Aporta muchísimo color: en un ambiente ya cargado de objetos, puede ser demasiado. Mejor en pared despejada.",
+   art:["Henri Matisse","André Derain"]},
+
+  {id:"expresionismo_simbolismo",n:"Expresionismo y simbolismo",a:"1893 – 1913",g:"Moderno",r:"Noruega, Austria y Alemania",
+   lema:"La angustia, el deseo y la ciudad moderna, sin disimulo.",
+   t:"Tres maneras distintas de cargar la pintura de emoción cruda: Munch con la angustia hecha paisaje, Klimt con el dorado y el patrón decorativo, Kirchner con la ciudad como amenaza. Ninguno busca gustar fácil, y por eso mismo generan más conversación que casi cualquier otra sala.",
+   rasgos:["Color disonante o dorado","Deformación expresiva","Carga emocional directa"],
+   pal:["#C23B2E","#D9A441","#1A1A1A","#3E5C4B"],
+   comprar:"El beso de Klimt es la opción más amable de la sala; El grito, la más contundente. Elegí según cuánta intensidad querés en la pared.",
+   art:["Edvard Munch","Gustav Klimt","Ernst Ludwig Kirchner"]},
+
+  {id:"cubismo",n:"Cubismo",a:"1907 – 1937",g:"Moderno",r:"Francia",
+   lema:"El mismo objeto, visto desde varios lados a la vez.",
+   t:"Rompe la idea de que un cuadro tiene un solo punto de vista: descompone la figura en planos facetados y los muestra todos juntos. En su etapa dura la paleta casi desaparece, reducida a grises y ocres.",
+   rasgos:["Simultaneidad de puntos de vista","Faceta geométrica","Paleta contenida"],
+   pal:["#8C877A","#3E362C","#B3AC9C","#1A1A18"],
+   comprar:"Es de las salas más \"serias\" y menos decorativas en sentido literal — funciona mejor como pieza de conversación que como fondo cálido.",
+   art:["Pablo Picasso","Georges Braque"]},
+
+  {id:"surrealismo",n:"Surrealismo",a:"1921 – 1964",g:"Moderno",r:"Francia, España y México",
+   lema:"Objetos reconocibles en combinaciones imposibles.",
+   t:"Lógica de sueño pintada con precisión fotográfica: cuanto más nítida la ejecución, más inquietante el resultado. El movimiento cumple cien años y está viviendo un revival confirmado en el mercado — es de las salas más vigentes de toda la lista.",
+   rasgos:["Escala y combinación imposibles","Ejecución detallista","Ambigüedad narrativa"],
+   pal:["#7FA0BC","#B99E6E","#2F4A63","#F0E4C8"],
+   comprar:"Genera conversación como ninguna otra sala: es la que más invita a preguntar qué está pasando en el cuadro.",
+   art:["Salvador Dalí","René Magritte","Joan Miró","Frida Kahlo","Max Ernst"]},
+
+  {id:"art_deco_grafica",n:"Art Déco y gráfica vintage",a:"1891 – 1929",g:"Moderno",r:"Francia",
+   lema:"El antecedente real del póster de diseño que se compra hoy.",
+   t:"Dos maneras de gráfica plana y elegante que anteceden en cien años al póster geométrico que hoy se vende en cualquier tienda de decoración: el cartel comercial de Toulouse-Lautrec y el retrato geométrico y saturado del Art Déco de Lempicka. El \"revival Art Déco\" es tendencia confirmada en decoración 2026.",
+   rasgos:["Línea de contorno marcada","Color plano","Composición gráfica, casi de afiche"],
+   pal:["#1F3A5F","#C23B2E","#D9A441","#111111"],
+   comprar:"Funciona igual de bien enmarcado formal que sin marco. Es de las opciones más \"gráficas\" de la lista — parece diseño antes que pintura.",
+   art:["Henri de Toulouse-Lautrec","Tamara de Lempicka"]},
+
+  {id:"interior_domestico",n:"Interior doméstico y color libre",a:"1913 – 1934",g:"Moderno",r:"Francia",
+   lema:"El comedor y la playa, pintados desde adentro.",
+   t:"Bonnard pinta directamente la escena de comedor —mesa, mantel, luz de ventana— con una calidez que la vuelve casi literalmente decorativa. Dufy hace lo mismo con el verano y el mar: trazo suelto, color plano, sin solemnidad. Es la sala más \"vivible\" de toda la selección.",
+   rasgos:["Tema doméstico o veraniego","Paleta cálida","Trazo suelto y liviano"],
+   pal:["#E8A23B","#C25B4A","#6E8C4A","#F5EFDD"],
+   comprar:"Si buscás algo que literalmente hable de la función del ambiente donde va (un cuadro de comedor para el comedor), esta es la sala.",
+   art:["Pierre Bonnard","Raoul Dufy"]},
+
+  {id:"abstraccion_geometrica",n:"Abstracción geométrica",a:"1923 – 1951",g:"Moderno",r:"Rusia, Países Bajos y Estados Unidos",
+   lema:"Forma reducida a lo esencial, sin referencia al mundo visible.",
+   t:"De la espiral simbólica de Kandinsky a la grilla estricta de Mondrian, pasando por el campo de color casi vacío de Newman: es el registro más \"racional\" de la abstracción, y el que hoy más se reproduce como póster geométrico.",
+   rasgos:["Geometría o campo de color puro","Sin gesto visible","Composición calculada"],
+   pal:["#C23B2E","#1F3A6B","#E8C33B","#F5F3EC"],
+   comprar:"Es el estilo que menos se pelea con muebles de líneas rectas y ambientes minimalistas. Formato grande, sin marco.",
+   art:["Wassily Kandinsky","Piet Mondrian","Barnett Newman"]},
+
+  {id:"expresionismo_abstracto",n:"Expresionismo abstracto",a:"1950 – 1961",g:"Moderno",r:"Estados Unidos",
+   lema:"El gesto de pintar, hecho visible.",
+   t:"Formato enorme, chorreados, brochazos de cuerpo entero: la obra no representa nada, es el registro físico de lo que pasó frente al lienzo. Pollock es el nombre que más pediste, y está acá con dos de sus piezas más conocidas.",
+   rasgos:["Gran formato","Gesto y chorreado","Sin punto focal único"],
+   pal:["#1A1A18","#B5341F","#D9CBB0","#3E362C"],
+   comprar:"Necesita pared despejada y espacio para respirar — es de los estilos que más se resienten si se lo rodea de otros objetos.",
+   art:["Jackson Pollock","Mark Rothko","Willem de Kooning","Helen Frankenthaler"]},
+
+  {id:"fotografia_autor",n:"Fotografía de autor",a:"1900 – 1936",g:"Moderno",r:"Estados Unidos y Francia",
+   lema:"La foto como obra, no como documento.",
+   t:"Blanco y negro atmosférico o documental, pensado para mirarse como se mira un cuadro. La fotografía es, según el research, uno de los medios en alza más claros en decoración: da textura y seriedad sin el color que a veces sobra.",
+   rasgos:["Blanco y negro","Composición pensada","Atmósfera antes que anécdota"],
+   pal:["#1A1A1A","#6E6A62","#D9D5CD","#3E3A34"],
+   comprar:"Copia grande, marco fino negro o sin marco. Funciona muy bien en pasillos o zonas de paso, no solo en el living.",
+   art:["Alfred Stieglitz","Eugène Atget","Dorothea Lange"]},
+
+  {id:"botanica_moderna",n:"Botánica moderna a gran escala",a:"1928 – 1932",g:"Moderno",r:"Estados Unidos",
+   lema:"Una flor acercada hasta volverse casi abstracta.",
+   t:"O'Keeffe agranda pétalos hasta que dejan de leerse como flor y empiezan a leerse como forma pura y color. Es probablemente la entrada más amable a la abstracción para alguien que todavía no se anima del todo.",
+   rasgos:["Primer plano extremo","Curvas orgánicas","Color saturado y luminoso"],
+   pal:["#C23B6B","#E8A23B","#6E8C4A","#F7E8D4"],
+   comprar:"De los estilos más fáciles de convivir: colorido pero nunca agresivo. Funciona en dormitorio y en living por igual.",
+   art:["Georgia O'Keeffe"]},
+
+  {id:"escultura_objeto",n:"Escultura y objeto de autor",a:"1889 – 1923",g:"Moderno",r:"Francia y Estados Unidos",
+   lema:"Arte que no va en la pared: va en la mesa, o en un rincón.",
+   t:"De la forma humana idealizada de Rodin a la forma pura de Brâncuși, pasando por la cerámica biomórfica de Ohr: es la manera más directa de meter arte en una casa sin necesitar una sola pared libre.",
+   rasgos:["Volumen real, no ilusión","Convive con el mueble","Superficie trabajada a mano"],
+   pal:["#8C5A3C","#1A1A1A","#C79A5B","#EDE8DD"],
+   comprar:"Pensalo por dónde va a vivir (mesa, rincón, estante) antes que por la pared. Una sola pieza bien puesta reemplaza a varios objetos de decoración juntos.",
+   art:["Auguste Rodin","Constantin Brâncuși","George Ohr"]},
+
+  {id:"pop_art",n:"Pop Art",a:"1962 – 1966",g:"Contemporáneo",r:"Estados Unidos",
+   lema:"La imagen del supermercado y el cómic, devuelta como cuadro.",
+   t:"Color plano industrial, repetición en serie, ambigüedad entre celebrar el consumo y burlarse de él. Sigue siendo, décadas después, de lo más reconocible y menos intimidante de todo el arte del siglo XX.",
+   rasgos:["Serigrafía o color plano","Repetición","Imagen de masas"],
+   pal:["#C23B2E","#E8C33B","#1B4E8C","#F5F0E6"],
+   comprar:"Mete mucho color puro en un ambiente. Se lleva bien con muebles simples y paredes claras que no le compitan.",
+   art:["Andy Warhol","Roy Lichtenstein","Robert Indiana"]},
+
+  {id:"modernismo_latinoamericano",n:"Modernismo latinoamericano",a:"1934 – 1935",g:"Contemporáneo",r:"México y Uruguay",
+   lema:"La modernidad europea, pensada desde acá.",
+   t:"Rivera lleva el mural a escala política y monumental en México; Torres-García arma una grilla propia, con símbolos, entre Montevideo y Barcelona. Es la sala que te da identidad regional dentro de un panorama mayormente europeo y estadounidense.",
+   rasgos:["Escala mural o simbólica","Identidad regional","Geometría con calidez"],
+   pal:["#B5341F","#1F3A5F","#D9A441","#3E5C4B"],
+   comprar:"Torres-García en particular es una referencia constante en MALBA y el MAMBA: es la opción más \"de acá\" de toda la lista.",
+   art:["Diego Rivera","Joaquín Torres-García"]},
+
+  {id:"arte_urbano",n:"Arte urbano",a:"1982 – 2002",g:"Contemporáneo",r:"Nueva York y Reino Unido",
+   lema:"Nació en el muro y terminó en la galería.",
+   t:"Aerosol, esténcil y una lectura rápida a distancia: nació fuera del circuito del arte y hoy es una de sus ramas más cotizadas y reconocibles. Basquiat lo lleva a la pintura de galería; Banksy, al espacio público con mensaje directo.",
+   rasgos:["Lectura rápida a distancia","Mensaje o gesto directo","Origen fuera del museo"],
+   pal:["#1A1A1A","#C23B2E","#E8E2D0","#3E5C4B"],
+   comprar:"Es de los estilos más jóvenes y menos solemnes de la lista. Funciona muy bien en ambientes con materiales duros: cemento, hierro, madera cruda.",
+   art:["Jean-Michel Basquiat","Banksy"]}
+];
+
+const OBRAS = [
+  // Grandes clásicos reconocibles
+  {t:"La Gioconda",ar:"Leonardo da Vinci",y:1503,s:"clasicos_universales",w:"Mona Lisa"},
+  {t:"La joven de la perla",ar:"Johannes Vermeer",y:1665,s:"clasicos_universales",w:"Girl with a Pearl Earring"},
+  {t:"Gótico americano",ar:"Grant Wood",y:1930,s:"clasicos_universales",w:"American Gothic"},
+  // Ukiyo-e
+  {t:"La gran ola de Kanagawa",ar:"Katsushika Hokusai",y:1831,s:"ukiyo_e",w:"The Great Wave off Kanagawa"},
+  {t:"Viento fresco, mañana clara (Fuji rojo)",ar:"Katsushika Hokusai",y:1830,s:"ukiyo_e",w:"Fine Wind, Clear Morning"},
+  {t:"Lluvia repentina sobre el puente Shin-Ōhashi",ar:"Utagawa Hiroshige",y:1857,s:"ukiyo_e",w:"Sudden Shower over Shin-Ōhashi Bridge and Atake"},
+  // Impresionismo
+  {t:"Nenúfares",ar:"Claude Monet",y:1916,s:"impresionismo",w:"Water Lilies (Monet series)"},
+  {t:"Impresión, sol naciente",ar:"Claude Monet",y:1872,s:"impresionismo",w:"Impression, Sunrise"},
+  {t:"Baile en el Moulin de la Galette",ar:"Pierre-Auguste Renoir",y:1876,s:"impresionismo",w:"Bal du moulin de la Galette"},
+  {t:"La clase de danza",ar:"Edgar Degas",y:1874,s:"impresionismo",w:"The Dance Class"},
+  {t:"Calle de París, día lluvioso",ar:"Gustave Caillebotte",y:1877,s:"impresionismo",w:"Paris Street; Rainy Day"},
+  {t:"La cuna",ar:"Berthe Morisot",y:1872,s:"impresionismo",w:"The Cradle (Morisot)"},
+  // Postimpresionismo
+  {t:"La noche estrellada",ar:"Vincent van Gogh",y:1889,s:"postimpresionismo",w:"The Starry Night"},
+  {t:"Los girasoles",ar:"Vincent van Gogh",y:1888,s:"postimpresionismo",w:"Sunflowers (Van Gogh series)"},
+  {t:"El café de noche",ar:"Vincent van Gogh",y:1888,s:"postimpresionismo",w:"The Night Café"},
+  {t:"Tarde de domingo en la Grande Jatte",ar:"Georges Seurat",y:1886,s:"postimpresionismo",w:"A Sunday Afternoon on the Island of La Grande Jatte"},
+  {t:"¿De dónde venimos? ¿Qué somos? ¿A dónde vamos?",ar:"Paul Gauguin",y:1897,s:"postimpresionismo",w:"Where Do We Come From? What Are We? Where Are We Going?"},
+  {t:"Los jugadores de cartas",ar:"Paul Cézanne",y:1895,s:"postimpresionismo",w:"The Card Players (Cézanne series)"},
+  // Fauvismo
+  {t:"La danza",ar:"Henri Matisse",y:1910,s:"fauvismo",w:"The Dance (Matisse)"},
+  {t:"Mujer con sombrero",ar:"Henri Matisse",y:1905,s:"fauvismo",w:"Woman with a Hat"},
+  {t:"Puente de Charing Cross, Londres",ar:"André Derain",y:1906,s:"fauvismo",w:"Charing Cross Bridge, London"},
+  // Expresionismo y simbolismo
+  {t:"El grito",ar:"Edvard Munch",y:1893,s:"expresionismo_simbolismo",w:"The Scream"},
+  {t:"El beso",ar:"Gustav Klimt",y:1908,s:"expresionismo_simbolismo",w:"The Kiss (Klimt)"},
+  {t:"Escena callejera de Berlín",ar:"Ernst Ludwig Kirchner",y:1913,s:"expresionismo_simbolismo",w:"Berlin Street Scene"},
+  // Cubismo
+  {t:"Las señoritas de Aviñón",ar:"Pablo Picasso",y:1907,s:"cubismo",w:"Les Demoiselles d'Avignon"},
+  {t:"Guernica",ar:"Pablo Picasso",y:1937,s:"cubismo",w:"Guernica (Picasso)"},
+  {t:"Violín y candelero",ar:"Georges Braque",y:1910,s:"cubismo",w:"Violin and Candlestick"},
+  // Surrealismo
+  {t:"La persistencia de la memoria",ar:"Salvador Dalí",y:1931,s:"surrealismo",w:"The Persistence of Memory"},
+  {t:"El hijo del hombre",ar:"René Magritte",y:1964,s:"surrealismo",w:"The Son of Man"},
+  {t:"La traición de las imágenes",ar:"René Magritte",y:1929,s:"surrealismo",w:"The Treachery of Images"},
+  {t:"El carnaval del arlequín",ar:"Joan Miró",y:1925,s:"surrealismo",w:"Harlequin's Carnival"},
+  {t:"Las dos Fridas",ar:"Frida Kahlo",y:1939,s:"surrealismo",w:"The Two Fridas"},
+  {t:"El elefante Célebes",ar:"Max Ernst",y:1921,s:"surrealismo",w:"The Elephant Celebes"},
+  // Art Déco y gráfica vintage
+  {t:"Moulin Rouge: La Goulue",ar:"Henri de Toulouse-Lautrec",y:1891,s:"art_deco_grafica",w:"Moulin Rouge: La Goulue"},
+  {t:"Tamara en el Bugatti verde",ar:"Tamara de Lempicka",y:1929,s:"art_deco_grafica",w:"Tamara in a Green Bugatti"},
+  // Interior doméstico y color libre
+  {t:"Comedor en el campo",ar:"Pierre Bonnard",y:1913,s:"interior_domestico",w:"Dining Room in the Country"},
+  {t:"Regata en Cowes",ar:"Raoul Dufy",y:1934,s:"interior_domestico",w:"Regatta at Cowes"},
+  // Abstracción geométrica
+  {t:"Amarillo-Rojo-Azul",ar:"Wassily Kandinsky",y:1925,s:"abstraccion_geometrica",w:"Yellow-Red-Blue"},
+  {t:"Composición VIII",ar:"Wassily Kandinsky",y:1923,s:"abstraccion_geometrica",w:"Composition VIII"},
+  {t:"Composición II en rojo, azul y amarillo",ar:"Piet Mondrian",y:1930,s:"abstraccion_geometrica",w:"Composition II in Red, Blue, and Yellow"},
+  {t:"Vir Heroicus Sublimis",ar:"Barnett Newman",y:1951,s:"abstraccion_geometrica",w:"Vir Heroicus Sublimis"},
+  // Expresionismo abstracto
+  {t:"Number 1, 1950 (Lavender Mist)",ar:"Jackson Pollock",y:1950,s:"expresionismo_abstracto",w:"Number 1, 1950 (Lavender Mist)"},
+  {t:"Ritmo de otoño (n.º 30)",ar:"Jackson Pollock",y:1950,s:"expresionismo_abstracto",w:"Autumn Rhythm"},
+  {t:"Naranja, rojo, amarillo",ar:"Mark Rothko",y:1961,s:"expresionismo_abstracto",w:"Orange, Red, Yellow"},
+  {t:"No. 61 (óxido y azul)",ar:"Mark Rothko",y:1953,s:"expresionismo_abstracto",w:"No. 61 (Rust and Blue)"},
+  {t:"Mujer I",ar:"Willem de Kooning",y:1952,s:"expresionismo_abstracto",w:"Woman I"},
+  {t:"Montañas y mar",ar:"Helen Frankenthaler",y:1952,s:"expresionismo_abstracto",w:"Mountains and Sea"},
+  // Fotografía de autor
+  {t:"El vapor (The Steerage)",ar:"Alfred Stieglitz",y:1907,s:"fotografia_autor",w:"The Steerage"},
+  {t:"Calles de París (obra de referencia)",ar:"Eugène Atget",y:1900,s:"fotografia_autor",w:"Eugène Atget"},
+  {t:"Madre migrante",ar:"Dorothea Lange",y:1936,s:"fotografia_autor",w:"Migrant Mother"},
+  // Botánica moderna
+  {t:"Amapolas orientales",ar:"Georgia O'Keeffe",y:1928,s:"botanica_moderna",w:"Oriental Poppies"},
+  {t:"Estramonio, flor blanca n.º 1",ar:"Georgia O'Keeffe",y:1932,s:"botanica_moderna",w:"Jimson Weed/White Flower No. 1"},
+  // Escultura y objeto de autor
+  {t:"El pensador",ar:"Auguste Rodin",y:1904,s:"escultura_objeto",w:"The Thinker"},
+  {t:"El beso",ar:"Auguste Rodin",y:1889,s:"escultura_objeto",w:"The Kiss (Rodin)"},
+  {t:"El pájaro en el espacio",ar:"Constantin Brâncuși",y:1923,s:"escultura_objeto",w:"Bird in Space"},
+  {t:"Pieza biomórfica (obra de referencia)",ar:"George Ohr",y:1900,s:"escultura_objeto",w:"George Ohr"},
+  // Pop Art
+  {t:"Latas de sopa Campbell",ar:"Andy Warhol",y:1962,s:"pop_art",w:"Campbell's Soup Cans"},
+  {t:"Díptico de Marilyn",ar:"Andy Warhol",y:1962,s:"pop_art",w:"Marilyn Diptych"},
+  {t:"Whaam!",ar:"Roy Lichtenstein",y:1963,s:"pop_art",w:"Whaam!"},
+  {t:"LOVE",ar:"Robert Indiana",y:1966,s:"pop_art",w:"LOVE (sculpture)"},
+  // Modernismo latinoamericano
+  {t:"El hombre controlador del universo",ar:"Diego Rivera",y:1934,s:"modernismo_latinoamericano",w:"Man, Controller of the Universe"},
+  {t:"Universalismo constructivo (obra de referencia)",ar:"Joaquín Torres-García",y:1935,s:"modernismo_latinoamericano",w:"Joaquín Torres-García"},
+  // Arte urbano
+  {t:"Obra de referencia",ar:"Jean-Michel Basquiat",y:1982,s:"arte_urbano",w:"Jean-Michel Basquiat"},
+  {t:"Niña con globo",ar:"Banksy",y:2002,s:"arte_urbano",w:"Girl with a Balloon"}
+];
+
+OBRAS.forEach((o,i)=>{ o.id="o"+i; o.q=(o.t+" "+o.ar+" painting").replace(/\s+/g," "); });
+const SALA_BY_ID = {}; SALAS.forEach(s=>SALA_BY_ID[s.id]=s);
+
+/* ================= imágenes =================
+   Las fotos ya están bajadas y guardadas en img/, junto con
+   img-manifest.json (generado una sola vez por un workflow de
+   GitHub Actions — ver scripts/fetch_images.py). Acá no se le pide
+   nada a Wikipedia en el momento: es un solo fetch, mismo origen,
+   a un archivo estático del propio sitio. */
+
+/* reintento a nivel <img>: por si el propio hosting tiene un
+   hipo puntual. Reintenta con backoff y a la tercera falla la
+   esconde en vez de mostrar el ícono roto del navegador. */
+function reintentarImg(im){
+  const n=(parseInt(im.dataset.intento||"0",10))+1;
+  if(n>3){ im.style.visibility="hidden"; return; }
+  im.dataset.intento=String(n);
+  const base=im.dataset.base||im.src.split("?")[0];
+  im.dataset.base=base;
+  setTimeout(()=>{ im.src=base+"?r="+n+"-"+Date.now(); },500*n+Math.random()*300);
+}
+
+async function resolver(paso){
+  paso=paso||function(){};
+  try{
+    const r=await fetch("img-manifest.json",{cache:"no-store"});
+    if(r.ok){
+      const m=await r.json();
+      OBRAS.forEach((o,i)=>{ if(m[i]&&m[i].img){ o.img=m[i].img; o.url=m[i].url||m[i].img; } });
+    }
+  }catch(e){}
+  paso();
+  return OBRAS.filter(o=>o.img);
+}
+
+
+/* ============ estado ============ */
+const K="duelo.v1";
+let S=null;
+const OBRA={}; OBRAS.forEach(o=>OBRA[o.id]=o);
+function guardar(){ try{ localStorage.setItem(K,JSON.stringify(S)); }catch(e){} }
+function cargar(){ try{ return JSON.parse(localStorage.getItem(K)); }catch(e){ return null; } }
+function borrar(){ try{ localStorage.removeItem(K); }catch(e){} }
+
+function mezclar(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* ============ portada ============ */
+let disponibles=[], largoElegido=Infinity;
+const opciones=[{n:"Corto · 60 obras",v:60},{n:"Medio · 120 obras",v:120},{n:"Completo · todas",v:Infinity}];
+const cajaLargo=document.getElementById("largo");
+opciones.forEach(o=>{
+  const b=document.createElement("button");
+  b.textContent=o.n; b.dataset.v=o.v; b.setAttribute("aria-pressed",o.v===largoElegido);
+  b.onclick=()=>{ largoElegido=o.v; [...cajaLargo.children].forEach(c=>c.setAttribute("aria-pressed",+c.dataset.v===o.v)); };
+  cajaLargo.appendChild(b);
+});
+
+const carga=document.getElementById("carga"), btnEmpezar=document.getElementById("empezar");
+carga.textContent="Cargando fotos…";
+resolver(()=>{}).then(()=>{
+  // El duelo define gusto para decorar hoy: se arma solo con estilos modernos y
+  // contemporáneos. Lo histórico (Renacimiento a Neoclasicismo, paisaje épico,
+  // bodegón clásico) sigue completo en el recorrido enciclopédico, pero acá no compite.
+  const MODERNAS = OBRAS.filter(o=>(SALA_BY_ID[o.s]||{}).g!=="Clásico");
+  const SALAS_MODERNAS = SALAS.filter(s=>s.g!=="Clásico");
+  disponibles = MODERNAS.filter(o=>o.img);
+  const tope = disponibles.length;
+  opciones.forEach(o=>{ if(o.v===Infinity) o.n = "Completo · "+tope+" obras"; });
+  [...cajaLargo.children].forEach((c,i)=>c.textContent=opciones[i].n);
+  if(disponibles.length<MODERNAS.length){
+    carga.textContent=disponibles.length+" de "+MODERNAS.length+" obras listas, de "+SALAS_MODERNAS.length+" estilos distintos. A las demás no se les encontró foto todavía.";
+  }else{
+    carga.textContent=disponibles.length+" obras listas, de "+SALAS_MODERNAS.length+" estilos distintos.";
+  }
+  btnEmpezar.disabled=false;
+  const g=cargar();
+  if(g&&g.orden&&g.i<g.orden.length&&g.orden.every(id=>OBRA[id]&&OBRA[id].img)){
+    btnEmpezar.textContent="Seguir desde la ronda "+(g.i)+" de "+(g.orden.length-1);
+    btnEmpezar.dataset.retomar="1";
+  }
+}).catch(()=>{
+  carga.textContent="No se pudo leer img-manifest.json. Si todavía no corriste el workflow de GitHub Actions, es esperable.";
+});
+
+btnEmpezar.onclick=()=>{
+  if(btnEmpezar.dataset.retomar==="1"){ S=cargar(); }
+  else{
+    const pool=mezclar(disponibles.slice()).slice(0,Math.min(largoElegido,disponibles.length));
+    S={orden:pool.map(o=>o.id),i:1,rey:pool[0].id,reinado:0,st:{}};
+    pool.forEach(o=>S.st[o.id]={ap:0,w:0,max:0});
+  }
+  guardar(); irAJuego();
+};
+
+/* ============ juego ============ */
+const $=id=>document.getElementById(id);
+let stack = (window.matchMedia ? window.matchMedia("(max-width:760px)").matches : window.innerWidth<760);
+let elegido=null;
+
+function irAJuego(){
+  $("portada").classList.add("oculto"); $("resultados").classList.add("oculto");
+  $("juego").classList.remove("oculto"); document.body.classList.add("jugando");
+  $("duelo").classList.toggle("stack",stack);
+  pintar();
+}
+$("btnLayout").onclick=()=>{ stack=!stack; $("duelo").classList.toggle("stack",stack); };
+
+function total(){ return S.orden.length-1; }
+
+function pintar(){
+  const rey=OBRA[S.rey], des=OBRA[S.orden[S.i]];
+  if(!des){ return terminar(); }
+  elegido=null;
+  $("rN").textContent=S.i; $("rT").textContent=total();
+  $("prog").style.width=((S.i-1)/total()*100).toFixed(1)+"%";
+
+  // el rey siempre a la izquierda / arriba
+  ponerLado("A",rey,true);
+  ponerLado("B",des,false);
+  $("ladoA").dataset.sel="0"; $("ladoB").dataset.sel="0";
+  const s=$("seguir"); s.disabled=true; s.textContent="Tocá la que te guste más";
+  precargar();
+}
+function ponerLado(l,o,esRey){
+  const im=$("img"+l);
+  im.classList.remove("fade");
+  im.style.visibility="";
+  delete im.dataset.intento; delete im.dataset.base;
+  im.onerror=()=>reintentarImg(im);
+  im.src=o.img; im.alt="Obra sin identificar";
+  void im.offsetWidth; im.classList.add("fade");
+  $("ficha"+l).innerHTML='<p class="t esperando">'+(esRey?"Tu favorita actual":"Nueva propuesta")+'</p>';
+  const c=$("corona"+l);
+  if(esRey&&S.reinado>0){ c.classList.remove("oculto"); $("rein"+l).textContent=S.reinado; }
+  else c.classList.add("oculto");
+  $("lado"+l).dataset.obra=o.id;
+}
+function revelar(){
+  ["A","B"].forEach(l=>{
+    const o=OBRA[$("lado"+l).dataset.obra];
+    const sala=SALA_BY_ID[o.s]||{n:""};
+    $("ficha"+l).innerHTML='<p class="t">'+o.t+'</p><p class="m">'+o.ar+", "+o.y+" — "+sala.n+'</p>';
+    $("img"+l).alt=o.t+", "+o.ar;
+  });
+}
+document.querySelectorAll(".pick").forEach(b=>{
+  b.onclick=()=>elegir(b.dataset.lado);
+});
+function elegir(l){
+  elegido=l;
+  $("ladoA").dataset.sel = l==="A"?"1":"0";
+  $("ladoB").dataset.sel = l==="B"?"1":"0";
+  revelar();
+  const s=$("seguir"); s.disabled=false; s.textContent="Continuar";
+}
+$("seguir").onclick=()=>{
+  if(!elegido) return;
+  const idA=$("ladoA").dataset.obra, idB=$("ladoB").dataset.obra;
+  const gana = elegido==="A"?idA:idB;
+  S.st[idA].ap=(S.st[idA].ap||0)+1;
+  S.st[idB].ap=(S.st[idB].ap||0)+1;
+  S.st[gana].w=(S.st[gana].w||0)+1;
+  if(gana===S.rey){ S.reinado++; }
+  else{ S.rey=gana; S.reinado=1; }
+  S.st[S.rey].max=Math.max(S.st[S.rey].max||0,S.reinado);
+  S.i++;
+  guardar();
+  if(S.i>=S.orden.length) terminar(); else pintar();
+};
+document.addEventListener("keydown",e=>{
+  if($("juego").classList.contains("oculto")) return;
+  if(e.key==="ArrowLeft"||e.key==="ArrowUp") elegir("A");
+  else if(e.key==="ArrowRight"||e.key==="ArrowDown") elegir("B");
+  else if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(elegido) $("seguir").click(); }
+});
+function precargar(){
+  for(let k=1;k<=3;k++){
+    const id=S.orden[S.i+k]; if(!id) break;
+    const o=OBRA[id]; if(o&&o.img){ const im=new Image(); im.src=o.img; }
+  }
+}
+$("btnRes").onclick=()=>terminar(true);
+
+/* ============ resultados ============ */
+function analizar(){
+  const jugadas=S.i-1;
+  const porEstilo={}, porArtista={}, porGrupo={};
+  S.orden.slice(0,Math.max(1,S.i)).forEach(id=>{
+    const o=OBRA[id], st=S.st[id]||{ap:0,w:0,max:0};
+    const s=SALA_BY_ID[o.s]||{n:o.s,g:"—"};
+    const e=porEstilo[o.s]||(porEstilo[o.s]={id:o.s,n:s.n,g:s.g,ap:0,w:0,obras:0});
+    e.ap+=st.ap; e.w+=st.w; e.obras++;
+    porArtista[o.ar]=(porArtista[o.ar]||0)+st.w;
+    porGrupo[s.g]=(porGrupo[s.g]||0)+st.w;
+  });
+  const estilos=Object.values(porEstilo).filter(e=>e.ap>0)
+    .map(e=>Object.assign(e,{tasa:e.w/e.ap}))
+    .sort((a,b)=>b.w-a.w||b.tasa-a.tasa);
+  const artistas=Object.entries(porArtista).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const grupos=Object.entries(porGrupo).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const reinados=S.orden.slice(0,Math.max(1,S.i))
+    .map(id=>({o:OBRA[id],max:(S.st[id]||{}).max||0}))
+    .filter(x=>x.max>0).sort((a,b)=>b.max-a.max).slice(0,6);
+  const rechazados=Object.values(porEstilo).filter(e=>e.ap>=3&&e.w===0).map(e=>e.n);
+  return {jugadas,estilos,artistas,grupos,reinados,rechazados,ganadora:OBRA[S.rey]};
+}
+function terminar(parcial){
+  if(parcial&&S.i<5){
+    const s=$("seguir");
+    const prev=s.textContent;
+    s.textContent="Elegí unas cuantas más y te muestro el perfil";
+    setTimeout(()=>{ s.textContent=prev; },2200);
+    return;
+  }
+  const a=analizar();
+  const R=$("resultados");
+  const maxW=Math.max(1,...a.estilos.map(e=>e.w));
+  const top=a.estilos.slice(0,3);
+  R.innerHTML=`
+    <h1>${parcial?"Cómo viene tu gusto":"Tu gusto, medido"}</h1>
+    <p>${parcial?"Vas por la ronda "+S.i+" de "+total()+". Esto es lo que se ve hasta acá.":
+      "Terminaste las "+total()+" comparaciones. Lo que sigue sale de tus propias elecciones, no de una recomendación general."}</p>
+
+    <h2>La que quedó en la pared</h2>
+    <div class="podio">
+      ${a.reinados.map((x,i)=>`<figure>
+        <div class="cuadro"><img src="${x.o.img}" alt="${x.o.t}" onerror="reintentarImg(this)"></div>
+        <figcaption><b>${x.o.t}</b>${x.o.ar}, ${x.o.y}<br>${(SALA_BY_ID[x.o.s]||{}).n} — aguantó ${x.max} ronda${x.max===1?"":"s"}</figcaption>
+      </figure>`).join("")}
+    </div>
+    <p style="margin-top:16px">Cuantas más rondas aguantó una obra, más fuerte fue tu preferencia. Ese número es la señal más confiable de todas.</p>
+
+    <h2>Estilos por rondas ganadas</h2>
+    <div class="rank">
+      ${a.estilos.slice(0,14).map(e=>`<div class="fila">
+        <div class="n">${e.n}<small>${e.g} — ganó ${e.w} de ${e.ap} duelo${e.ap===1?"":"s"}</small></div>
+        <div class="v">${Math.round(e.tasa*100)}%</div>
+        <div class="barra"><i style="width:${(e.w/maxW*100).toFixed(1)}%"></i></div>
+      </div>`).join("")}
+    </div>
+
+    <h2>Artistas que más elegiste</h2>
+    <div class="rank">
+      ${a.artistas.map(([nm,v])=>`<div class="fila"><div class="n">${nm}</div><div class="v">${v}</div></div>`).join("")}
+    </div>
+
+    <h2>Por época</h2>
+    <div class="rank">
+      ${a.grupos.map(([g,v])=>`<div class="fila"><div class="n">${g}</div><div class="v">${v}</div>
+        <div class="barra"><i style="width:${(v/Math.max(1,a.grupos[0][1])*100).toFixed(1)}%"></i></div></div>`).join("")}
+    </div>
+
+    <h2>Qué comprar con esto</h2>
+    ${top.map(e=>{
+      const s=SALA_BY_ID[e.id];
+      return `<div class="bloque"><h3>${s.n}</h3><p class="aa">${s.a}. ${s.art.slice(0,4).join(", ")}</p><p>${s.comprar}</p></div>`;
+    }).join("")}
+    ${a.rechazados.length?`<p style="margin-top:18px">Descartá sin culpa: ${a.rechazados.slice(0,6).join(", ")}. Perdieron todos los duelos en que aparecieron.</p>`:""}
+
+    <div class="acciones">
+      ${parcial?'<button class="pri" id="volverJuego">Seguir eligiendo</button>':""}
+      <button id="bajar">Descargar el informe</button>
+      <button id="copiarR">Copiar</button>
+      <button id="reiniciar">Empezar de nuevo</button>
+    </div>`;
+  $("juego").classList.add("oculto"); $("portada").classList.add("oculto");
+  R.classList.remove("oculto"); document.body.classList.remove("jugando");
+  window.scrollTo(0,0);
+
+  if(parcial) $("volverJuego").onclick=irAJuego;
+  $("bajar").onclick=()=>{
+    const b=new Blob([informe(a,parcial)],{type:"text/plain;charset=utf-8"});
+    const el=document.createElement("a");
+    el.href=URL.createObjectURL(b); el.download="mi-gusto-de-arte.txt"; el.click();
+    setTimeout(()=>URL.revokeObjectURL(el.href),2000);
+  };
+  $("copiarR").onclick=async()=>{
+    const btn=$("copiarR");
+    try{ await navigator.clipboard.writeText(informe(a,parcial)); btn.textContent="Copiado"; }
+    catch(e){ btn.textContent="No se pudo copiar"; }
+    setTimeout(()=>btn.textContent="Copiar",1800);
+  };
+  $("reiniciar").onclick=()=>{ borrar(); location.reload(); };
+}
+function informe(a,parcial){
+  let t="MI GUSTO DE ARTE\n"+(parcial?"Parcial, ronda "+S.i+" de "+total():"Completo, "+total()+" comparaciones")+"\n\n";
+  t+="OBRAS QUE MÁS AGUANTARON\n";
+  a.reinados.forEach(x=>{ t+="• "+x.o.t+" — "+x.o.ar+", "+x.o.y+" ("+(SALA_BY_ID[x.o.s]||{}).n+"): "+x.max+" rondas\n"+(x.o.url?"  "+x.o.url+"\n":""); });
+  t+="\nESTILOS POR RONDAS GANADAS\n";
+  a.estilos.slice(0,14).forEach((e,i)=>{ t+=(i+1)+". "+e.n+" — "+e.w+" de "+e.ap+" duelos ("+Math.round(e.tasa*100)+"%)\n"; });
+  t+="\nARTISTAS MÁS ELEGIDOS\n";
+  a.artistas.forEach(([nm,v])=>{ t+="• "+nm+": "+v+"\n"; });
+  t+="\nQUÉ BUSCAR\n";
+  a.estilos.slice(0,3).forEach(e=>{
+    const s=SALA_BY_ID[e.id];
+    t+="\n"+s.n+" ("+s.a+")\n"+s.comprar+"\nArtistas: "+s.art.join(", ")+"\n";
+  });
+  if(a.rechazados.length) t+="\nPARA DESCARTAR: "+a.rechazados.join(", ")+"\n";
+  return t;
+}
+</script>
+</body>
+</html>
